@@ -20,9 +20,26 @@ Describe "Get-PartNumers" {
         )
 
         # Act
-        $PartNumbersSum = Get-PartNumbersSum -Content $Content
+        $PartNumbersSum = Get-PartNumbersSumP1 -Content $Content
+        # $PartNumbersSum = Get-PartNumbersSum -Content (Get-Content -Path "$PSScriptRoot\input.txt")
 
         # Assert
         $PartNumbersSum | Should -Be 4361
+    }
+
+    It "Should handle dollar signs" {
+        # Arrange
+        $Content = @(
+            '..$788.............................54.........501...........555.........270.................................521......893....................'
+            "..../..*963........................*..860......................*....53...../.....................52.................&....347........428*522."            
+            "............*......41..481+.......462....$..187......678.......420....-....................&115.+...........................+..............."
+        )
+
+        # Act
+        $PartNumbersSum = Get-PartNumbersSumP1 -Content $Content
+        # $PartNumbersSum = Get-PartNumbersSum -Content (Get-Content -Path "$PSScriptRoot\input.txt")
+
+        # Assert
+        $PartNumbersSum | Should -Be 7263
     }
 }
