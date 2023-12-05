@@ -87,7 +87,7 @@ if (Test-Path -Path $Path) {
     # Get the input from the file
     $Content = Get-Content -Path $Path
 
-    # Get-PossibleGamesP1 -Content $Content -CubeMaxes $CubesMaxes
+    Get-PossibleGamesP1 -Content $Content -CubeMaxes $CubesMaxes
     Get-PossibleGamesP2 -Content $Content
 } else {
     Write-Information "Path does not exist" -InformationAction Continue
