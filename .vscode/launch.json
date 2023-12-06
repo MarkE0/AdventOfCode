@@ -9,7 +9,7 @@
             "type": "PowerShell",
             "request": "launch",
             "script": "${file}",
-            "args": []
+            "args": ["-Path ${workspaceFolder}/2023/Day03/input.txt"]
         },
         {
             "name": "PS: D02 Tests",

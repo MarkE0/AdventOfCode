@@ -14,16 +14,20 @@ function Get-PartNumbersSumP1 {
     
     $PartNumbersSum = 0
 
-    $Content = $Content -replace "\.", " "
-    $Content | Write-Verbose
+    $Content | Select-Object -First 14 | Write-Verbose; Write-Verbose "..."
 
     $YLength = $Content.Length
     $XLength = $Content[0].Length
 
     for ($y = 0; $y -lt $YLength; $y++) {
         :NextNumberSearch
-        for ($x = 0; $x -lt $XLength; $x++) {
-            $char = $Content[$y][$x]
+        for ($x = 0; $x -le $XLength; $x++) {
+            if ($x -lt $XLength) {
+                $char = $Content[$y][$x]
+            }
+            else {
+                $char = $null
+            }
             
             if ($char -like "[0-9]") {
                 if ($null -eq $number) {
@@ -43,8 +47,8 @@ function Get-PartNumbersSumP1 {
                         for ($x2 = ($numberStart - 1); $x2 -le ($numberEnd + 1); $x2++) {
                             if ($x2 -lt 0 -or $x2 -ge $XLength) { continue }
                         
-                            if ($Content[$y2][$x2] -notlike "[0-9 ]") { # E.g. is a symbol
-                                $PartNumbersSum += [int]$number
+                            if ($Content[$y2][$x2] -notlike "[0-9.]") { # E.g. is a symbol
+                                $PartNumbersSum += [int]("0" + $number) # Prepend a 0 to the number to handle single digit numbers
                                 $number = $null
                                 continue NextNumberSearch
                             }
@@ -62,8 +66,7 @@ function Get-PartNumbersSumP1 {
 
 Write-Verbose "Path: $Path"
 
-if ($null -ne $Path) {
+if (-not([string]::IsNullOrEmpty($Path))) {
     $Content = Get-Content -Path $Path
-    $Content = (Get-Content -Path $Path -Raw) -split "`r`n"
     Get-PartNumbersSumP1 -Content $Content
 }
