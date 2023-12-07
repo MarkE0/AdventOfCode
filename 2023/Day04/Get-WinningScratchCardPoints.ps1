@@ -32,10 +32,49 @@ function Get-ScratchCardPoints {
     return $Points
 }
 
+function Get-CardsSum {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string[]]
+        $CardsContent
+    )
+
+    $CardCounts = @{}
+
+    foreach ($Card in $CardsContent) {
+        $CardNumber, $WinningNumbers, $MyNumbers = $Card -split ':\s+| \| '
+        $CardNumber = [int]($CardNumber -replace "Card\s+","")
+
+        # Each card exists once already
+        if ($CardCounts.ContainsKey($CardNumber)) {
+            $CardCounts[$CardNumber]++
+        } else {
+            $CardCounts[$CardNumber] = 1
+        }
+
+        $WinningNumbersHS = $WinningNumbers -split '\s+' -as [System.Collections.Generic.HashSet[int]] # Use this as we can perform an intersection between two hashsets
+        $WinningNumbersHS.IntersectWith($MyNumbers -split '\s+' -as [System.Collections.Generic.HashSet[int]])
+        # Write-Verbose "Wins: $($WinningNumbersHS.Count)" -Verbose
+
+        $CountOfThisCard = $CardCounts[$CardNumber]
+        for ($i=1; $i -le $WinningNumbersHS.Count; $i++) {
+            if ($CardCounts.ContainsKey($CardNumber)) {
+                $CardCounts[$CardNumber+$i] += $CountOfThisCard
+            } else {
+                $CardCounts[$CardNumber+$i] = 1
+            }
+        }
+    }
+
+    # $CardCounts | Write-Verbose -Verbose
+    return $CardCounts.Values | Measure-Object -Sum | Select-Object -ExpandProperty Sum
+}
+
 
 # Script
 if (-not([string]::IsNullOrEmpty($Path))) {
     # Execute functions with provided file
     Get-ScratchCardPoints -CardsContent (Get-Content -Path $Path)
+    Get-CardsSum -CardsContent (Get-Content -Path $Path)
 }
 

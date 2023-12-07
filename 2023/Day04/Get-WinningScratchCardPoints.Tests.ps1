@@ -39,7 +39,21 @@ Describe "Day 04" {
     }
 
     Context "Part 02" {
-        It "Should return the correct number of points" -Skip {
+        It "Should return the correct sum of cards (small set)" {
+            # Arrange
+            $ScratchCards = @(
+                "Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53",
+                "Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19"
+            )
+
+            # Act
+            $Sum = Get-CardsSum -CardsContent $ScratchCards
+
+            # Assert
+            $Sum | Should -Be 10
+        }
+
+        It "Should return the correct number of cards (test set)" {
             # Arrange
             $ScratchCards = @(
                 "Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53",
@@ -51,10 +65,10 @@ Describe "Day 04" {
             )
 
             # Act
-            $Points = Get-ScratchCardPoints -CardsContent $ScratchCards
+            $Sum = Get-CardsSum -CardsContent $ScratchCards
 
             # Assert
-            $Points | Should -Be 13
+            $Sum | Should -Be 30
         }
     }
 }
