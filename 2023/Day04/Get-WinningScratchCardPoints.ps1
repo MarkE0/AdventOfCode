@@ -52,12 +52,17 @@ function Get-CardsSum {
             $CardCounts[$CardNumber] = 1
         }
 
-        $WinningNumbersHS = $WinningNumbers -split '\s+' -as [System.Collections.Generic.HashSet[int]] # Use this as we can perform an intersection between two hashsets
-        $WinningNumbersHS.IntersectWith($MyNumbers -split '\s+' -as [System.Collections.Generic.HashSet[int]])
-        # Write-Verbose "Wins: $($WinningNumbersHS.Count)" -Verbose
+        # Use Compare-Object to find the winning numbers
+        # $MyWinningNumbers = Compare-Object -ReferenceObject ($WinningNumbers -split '\s+') -DifferenceObject ($MyNumbers -split '\s+') -IncludeEqual -ExcludeDifferent -PassThru
+
+        # Using a HashSet is faster than using Compare-Object
+        $MyWinningNumbers = $WinningNumbers -split '\s+' -as [System.Collections.Generic.HashSet[int]] # Use this as we can perform an intersection between two hashsets
+        $MyWinningNumbers.IntersectWith($MyNumbers -split '\s+' -as [System.Collections.Generic.HashSet[int]])
+
+        # Write-Verbose "Wins: $($MyWinningNumbers.Count)" -Verbose
 
         $CountOfThisCard = $CardCounts[$CardNumber]
-        for ($i=1; $i -le $WinningNumbersHS.Count; $i++) {
+        for ($i=1; $i -le $MyWinningNumbers.Count; $i++) {
             if ($CardCounts.ContainsKey($CardNumber)) {
                 $CardCounts[$CardNumber+$i] += $CountOfThisCard
             } else {
