@@ -75,20 +75,33 @@ Describe "Day 05" {
 
             $SeedMinLocation = Get-SeedMinLocationP1 -SeedMapData $SeedMapData
 
-            $SeedMinLocation | Should -Be 1062922501
+            $SeedMinLocation | Should -Be 341771914
         }
     }
 
     Context "Part 2" {
-        It "Should return something" -Pending {
+        It "Should return something" {
             # Arrange
-            $SeedMap = $SeedMapData
+            $SeedMap = $SeedMapData | Where-Object { [string]::IsNullOrEmpty($_) -eq $false }
 
             # Act
             $SeedMinLocation = Get-SeedMinLocationP2 -SeedMap $SeedMap
 
             # Assert
-            $SeedMinLocation | Should -Be 35
+            $SeedMinLocation | Should -Be 46
+        }
+    }
+
+    Context "Part 2 - Better" {
+        It "Should return 46 (from seed 82)" {
+            # Arrange
+            $SeedMap = $SeedMapData | Where-Object { [string]::IsNullOrEmpty($_) -eq $false }
+
+            # Act
+            $SeedMinLocation = Get-SeedMinLocationP2Better -SeedMap $SeedMap
+
+            # Assert
+            $SeedMinLocation | Should -Be 46
         }
     }
 }
