@@ -66,7 +66,6 @@ Data:
         15(37)51 --> 0-36 (-15)
         52(2)53   --> 37-38 (-15)
 
-
                                                                                                     1
 0         1         2         3         4         5         6         7         8         9         0
 01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
@@ -94,3 +93,44 @@ Data:
 0         1         2         3         4         5         6         7         8         9         0
 01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
 |=========|=========|=========|=========|=========|=========|=========|=========|=========|=========| FERTILISER
+
+
+    Key/baseRangeFirst:
+    0:  baseRangeLast: 49
+        ShiftAmount:   0
+        ShiftedFirst:  0
+        ShiftedLast:   49
+
+    50: baseRangeLast: 97
+        ShiftAmount:   +2
+        ShiftedFirst:  52
+        ShiftedLast:   99
+
+    98: baseRangeLast: 99
+        ShiftAmount:   -48
+        ShiftedFirst:  50
+        ShiftedLast:   51
+
+Pseudocode
+----------
+foreach (category in categories) {  # seed-to-soil map:
+    foreach (dataRow in DataRows) { # 50 98 2 (Destination Source Length)
+        newMappingFirst  = dataRow[0]
+        prevMappingFirst = dataRow[1]
+        newRangeLength   = dataRow[2]
+        prevMappingLast  = prevMappingFirst + newRangeLength - 1
+        newMappingLast   = newMappingFirst  + newRangeLength - 1 # Used..?
+        newMappingShift  = newMappingFirst - prevMappingFirst
+        foreach (range in ranges) { #
+            if (prevMappingFirst between range.ShiftedFirst and range.ShiftedLast) {
+                Set new base range first
+                if (prevMappingLast between range.ShiftedFirst and range.ShiftedLast) {
+                    #something
+                }
+                else {
+                    #something else
+                }
+            }
+        }
+    }
+}
