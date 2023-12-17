@@ -98,39 +98,68 @@ Data:
     Key/baseRangeFirst:
     0:  baseRangeLast: 49
         ShiftAmount:   0
-        ShiftedFirst:  0
-        ShiftedLast:   49
+        ShiftedStart:  0
+        ShiftedEnd:   49
 
     50: baseRangeLast: 97
         ShiftAmount:   +2
-        ShiftedFirst:  52
-        ShiftedLast:   99
+        ShiftedStart:  52
+        ShiftedEnd:   99
 
     98: baseRangeLast: 99
         ShiftAmount:   -48
-        ShiftedFirst:  50
-        ShiftedLast:   51
+        ShiftedStart:  50
+        ShiftedEnd:   51
 
 Pseudocode
 ----------
+# Process the mapping details/file
 foreach (category in categories) {  # seed-to-soil map:
     foreach (dataRow in DataRows) { # 50 98 2 (Destination Source Length)
-        newMappingFirst  = dataRow[0]
-        prevMappingFirst = dataRow[1]
-        newRangeLength   = dataRow[2]
-        prevMappingLast  = prevMappingFirst + newRangeLength - 1
-        newMappingLast   = newMappingFirst  + newRangeLength - 1 # Used..?
-        newMappingShift  = newMappingFirst - prevMappingFirst
-        foreach (range in ranges) { #
-            if (prevMappingFirst between range.ShiftedFirst and range.ShiftedLast) {
-                Set new base range first
-                if (prevMappingLast between range.ShiftedFirst and range.ShiftedLast) {
-                    #something
+        newDestinationStart = dataRow[0] # Destination
+        newSourceStart      = dataRow[1] # Source
+        newRangeLength      = dataRow[2] # 
+        newSourceEnd        = newSourceStart + newRangeLength - 1
+        newDestinationEnd   = newDestinationStart  + newRangeLength - 1 # Used..?
+        newRangeShift       = newDestinationStart - newSourceStart
+        findNewSourceEnd    = false
+        startAlreadyShifted = false
+        foreach (baseRange in baseRanges) { # 0-inf. initially; Then 0-49 shifted 0, 50-97 shifted +2, 98-99 shifted -48
+            if (newSourceStart -eq range.ShiftedStart) {
+                range.ShiftedStart += newRangeShift
+                findNewSourceEnd = true
+                startAlreadyShifted = true
+            }
+            elseif (range.ShiftedStart < newSourceStart <= range.ShiftedEnd) {
+                newBaseRangeForStart = {
+                    key           = newSourceStart - range.ShiftedAmount
+                    baseRangeLast = TBD
+                    ShiftAmount   = range.ShiftAmount + newRangeShift
+                    ShiftedStart  = newDestinationStart
+                    ShiftedEnd    = newDestinationEnd
+                }
+                findNewSourceEnd = true
+            }
+            if (findNewSourceEnd) {
+                if (range.ShiftedStart <= newSourceEnd < range.ShiftedEnd) {
+                    newBaseRangeForEnd = {
+                        key           = newSourceEnd - range.ShiftedAmount
+                        baseRangeLast = range.baseRangeLast
+                        ShiftAmount   = range.ShiftAmount
+                        ShiftedStart  = newDestinationEnd + 1
+                        ShiftedEnd    = range.ShiftedEnd
+                    }
+                    findNewSourceEnd = false
                 }
                 else {
-                    #something else
+                    if (-not startAlreadyShifted) {
+                        range.ShiftedStart += newRangeShift
+                    }
                 }
+
             }
         }
+        Add newBaseRangeForStart to baseRanges
+        Add newBaseRangeForEnd to baseRanges
     }
 }
