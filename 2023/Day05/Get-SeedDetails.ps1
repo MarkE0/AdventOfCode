@@ -102,6 +102,93 @@ function Get-SeedMapsAsSplits {
     $MappingSplits
 }
 
+function Get-SeedMapsAttempt3 {
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [string[]]
+        $SeedMapData
+    )
+
+    # Set up the initial base range (0-inf initially)
+    $baseRanges = @{[long]0 = [PSCustomObject]@{ # TODO: Is this definitely the right way to set this up..?
+        baseRangeEnd = $null;
+        shiftAmount  = [long]0;
+        shiftedStart = [long]0;
+        shiftedEnd   = $null}
+    }
+
+    # Process the mapping details/file
+    for ($i = 0; $i -lt $SeedMapData.Length; $i++) {
+        $line = $SeedMapData[$i]
+        if ($line -match "([a-z\-]) map:") {  # seed-to-soil map:
+            $dataRow = $SeedMapData[$i + 1]
+            while ($dataRow -match '(\d+)\s(\d+)\s(\d+)' -and $i -lt $SeedMapData.Length) { # 50 98 2 (Destination Source Length)
+                # $newDestinationStart = $Matches[0] # Destination
+                # $newSourceStart      = $Matches[1] # Source
+                # $newRangeLength      = $Matches[2] # Length
+                $newDestinationStart, $newSourceStart, $newRangeLength = $dataRow -split '\s' -as [long[]] # Destination Source Length
+                $newSourceEnd        = $newSourceStart + $newRangeLength - 1
+                $newDestinationEnd   = $newDestinationStart  + $newRangeLength - 1 # Used..?
+                $newRangeShift       = $newDestinationStart - $newSourceStart
+                $findNewSourceEnd    = $false
+                $startAlreadyShifted = $false
+                
+                $sortedKeys = $baseRanges.Keys | Sort-Object
+                # $originalMappingSplits = $MappingSplits.Clone()
+                for ($keyCount = 0; $keyCount -lt $sortedKeys.Count; $keyCount++) { # Loop over the keys in the baseRanges
+                # foreach ($baseRange in $baseRanges) { # 0-inf. initially; Then 0-49 shifted 0, 50-97 shifted +2, 98-99 shifted -48
+                    $baseRange = $baseRanges[$sortedKeys[$keyCount]] # Base range is initially 0-inf.; Then 0-49 shifted 0, 50-97 shifted +2, 98-99 shifted -48
+                    if ($newSourceStart -eq $baseRange.shiftedStart) {
+                        $baseRange.shiftedStart += $newRangeShift
+                        $findNewSourceEnd    = $true
+                        $startAlreadyShifted = $true
+                    }
+                    elseif ($newSourceStart -gt $baseRange.shiftedStart -and ($newSourceStart -le $baseRange.shiftedEnd -or $null -eq $baseRange.shiftedEnd)) {
+                        $key = $newSourceStart - $baseRange.shiftedAmount
+                        $newBaseRangeForStart = @{
+                            # key           = $key  # TODO: ACtually need the key, in order to add it to the baseRanges hashtable - Maybe include this value (and any others) in the object.
+                            baseRangeEnd = [long]999; # TODO TBD
+                            shiftAmount  = $baseRange.shiftAmount + $newRangeShift # TODO: These should proably all be type long
+                            shiftedStart = $newDestinationStart
+                            shiftedEnd   = $newDestinationEnd
+                        }
+                        $findNewSourceEnd = $true
+                    }
+                    if ($findNewSourceEnd) {
+                        if ($newSourceEnd -ge $baseRange.shiftedStart -and ($newSourceEnd -lt $baseRange.shiftedEnd -or $null -eq $baseRange.shiftedEnd)) {
+                            $key = $newSourceEnd - $baseRange.shiftedAmount
+                            $newBaseRangeForEnd = @{[long]$key = [PSCustomObject]@{ # TODO: THis is different to the above.
+                                # key           = $key
+                                baseRangeEnd = $baseRange.baseRangeEnd
+                                shiftAmount  = $baseRange.shiftAmount
+                                shiftedStart = $newDestinationEnd + 1
+                                shiftedEnd   = $baseRange.shiftedEnd
+                            }}
+                            $findNewSourceEnd = $false
+                        }
+                        else {
+                            if (-not ($startAlreadyShifted)) {
+                                $baseRange.shiftedStart += $newRangeShift
+                            }
+                        }
+                    }
+                }
+                # Add newBaseRangeForStart to baseRanges
+                if ($newBaseRangeForStart) {
+                    # $baseRanges.Add($newBaseRangeForStart)
+                    $baseRanges[$newBaseRangeForStart.shiftedStart] = $newBaseRangeForStart
+                }
+
+                # Add newBaseRangeForEnd to baseRanges
+                if ($newBaseRangeForEnd) {
+                    $baseRanges.Add($newBaseRangeForEnd)
+                }
+            }
+        }
+    }
+}
+
 function Get-SeedNumbers {
     param (
         [Parameter(Mandatory = $true)]
@@ -212,7 +299,8 @@ function Get-SeedMinLocationP2Better {
         $SeedMap
     )
 
-    $Mappings = Get-SeedMapsAsSplits -SeedMapData $SeedMap
+    # $Mappings = Get-SeedMapsAsSplits -SeedMapData $SeedMap
+    $Mappings = Get-SeedMapsAttempt3 -SeedMapData $SeedMap
     $SeedRanges = Get-SeedRanges -SeedMapData $SeedMap
     $MinimumLocation = $null
     foreach ($seedRange in $SeedRanges) {
