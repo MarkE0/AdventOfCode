@@ -123,17 +123,14 @@ function Get-SeedMapsAttempt3 {
     for ($dataLineArrayNumber = 0; $dataLineArrayNumber -lt $SeedMapData.Length; $dataLineArrayNumber++) {
         $line = $SeedMapData[$dataLineArrayNumber]
         if ($line -match "([a-z\-]) map:") {  # seed-to-soil map:
-            # TODO: Create a semi-clone here? E.g. set the baseRangeStart/End to value of ShiftedStart/End. Then use these new values in the if/else statements below.
+            # TODO-MaybeNot: Create a semi-clone here? E.g. set the baseRangeStart/End to value of ShiftedStart/End. Then use these new values in the if/else statements below.
             $dataRow = $SeedMapData[$dataLineArrayNumber + 1]
             $baseRangesTemp = @{}
             while ($dataRow -match '(\d+)\s(\d+)\s(\d+)' -and $dataLineArrayNumber -lt $SeedMapData.Length) { # 50 98 2 (Destination Source Length)
                 $dataRow = $SeedMapData[++$dataLineArrayNumber]
-                # $newDestinationStart = $Matches[0] # Destination
-                # $newSourceStart      = $Matches[1] # Source
-                # $newRangeLength      = $Matches[2] # Length
                 $newDestinationStart, $newSourceStart, $newRangeLength = $dataRow -split '\s' -as [long[]] # Destination Source Length
                 $newSourceEnd        = $newSourceStart + $newRangeLength - 1
-                $newDestinationEnd   = $newDestinationStart  + $newRangeLength - 1 # Used..?
+                $newDestinationEnd   = $newDestinationStart + $newRangeLength - 1 # Used..?
                 $newRangeShift       = $newDestinationStart - $newSourceStart
                 $findNewSourceEnd    = $false
                 $startAlreadyShifted = $false
@@ -144,7 +141,8 @@ function Get-SeedMapsAttempt3 {
                     $baseRange = $baseRanges[$sortedKeys[$keyCount]] # Base range is initially 0-inf.; Then 0-49 shifted 0, 50-97 shifted +2, 98-99 shifted -48
                     # If the newSourceStart matches the base range, then update current entry
                     if ($newSourceStart -eq $baseRange.shiftedStart) {
-                        $baseRange.shiftedStart += $newRangeShift
+                        # $baseRange.shiftedStart += $newRangeShift
+                        $baseRange.shiftAmount += $newRangeShift
                         $findNewSourceEnd    = $true
                         $startAlreadyShifted = $true
                     }
@@ -154,16 +152,16 @@ function Get-SeedMapsAttempt3 {
                             baseRangeStart = $newSourceStart - $baseRange.shiftAmount
                             baseRangeEnd   = $newSourceEnd - $baseRange.shiftAmount;  # TODO: This okay?
                             shiftAmount    = $baseRange.shiftAmount + $newRangeShift  # TODO: These should proably all be type long
-                            shiftedStart   = $newDestinationStart
-                            shiftedEnd     = $newDestinationEnd
+                            # shiftedStart   = $newDestinationStart
+                            # shiftedEnd     = $newDestinationEnd
                         }
                         # Update the end of the current baseRange so the new one can start
                         $replacementBaseRange = @{
                             baseRangeStart = $baseRange.baseRangeStart
                             baseRangeEnd   = $newBaseRangeForStart.baseRangeStart - 1
                             shiftAmount    = $baseRange.shiftAmount
-                            shiftedStart   = $baseRange.shiftedStart
-                            shiftedEnd     = $newBaseRangeForStart.shiftedStart - 1
+                            # shiftedStart   = $baseRange.shiftedStart
+                            # shiftedEnd     = $newBaseRangeForStart.shiftedStart - 1
                         }
                         # $baseRange.baseRangeEnd = $newBaseRangeForStart.baseRangeStart - 1
                         # $baseRange.shiftedEnd = $newBaseRangeForStart.shiftedStart - 1
@@ -176,8 +174,8 @@ function Get-SeedMapsAttempt3 {
                                 baseRangeStart = $newSourceEnd - $baseRange.shiftAmount + 1
                                 baseRangeEnd   = $baseRange.baseRangeEnd
                                 shiftAmount    = $baseRange.shiftAmount
-                                shiftedStart   = $newDestinationEnd + 1
-                                shiftedEnd     = $baseRange.shiftedEnd
+                                # shiftedStart   = $newDestinationEnd + 1
+                                # shiftedEnd     = $baseRange.shiftedEnd
                             }
                             $findNewSourceEnd = $false
                             # TODO: Break out of the loop, as we've got the end now
@@ -213,6 +211,12 @@ function Get-SeedMapsAttempt3 {
             # foreach ($baseRangeTemp in $baseRangesTemp.Values) {
             #     $baseRanges[$baseRangeTemp.baseRangeStart] = $baseRangeTemp
             # }
+
+            # TODO: End of the current map set, so apply changes to real baseRanges
+            foreach ($baseRange in $baseRanges) {
+                $baseRange.shiftedStart += $baseRange.shiftAmount
+                $baseRange.shiftedEnd += $baseRange.shiftAmount
+            }
         }
     }
 }
