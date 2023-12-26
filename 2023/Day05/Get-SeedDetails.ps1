@@ -123,6 +123,7 @@ function Get-SeedMapsAttempt3 {
     for ($dataLineArrayNumber = 0; $dataLineArrayNumber -lt $SeedMapData.Length; $dataLineArrayNumber++) {
         $line = $SeedMapData[$dataLineArrayNumber]
         if ($line -match "([a-z\-]) map:") {  # seed-to-soil map:
+            # TODO: Create a semi-clone here? E.g. set the baseRangeStart/End to value of ShiftedStart/End. Then use these new values in the if/else statements below.
             $dataRow = $SeedMapData[$dataLineArrayNumber + 1]
             $baseRangesTemp = @{}
             while ($dataRow -match '(\d+)\s(\d+)\s(\d+)' -and $dataLineArrayNumber -lt $SeedMapData.Length) { # 50 98 2 (Destination Source Length)
