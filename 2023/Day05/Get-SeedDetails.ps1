@@ -112,18 +112,21 @@ function Get-SeedMapsAttempt3 {
 
     # Set up the initial base range (0-inf initially)
     $baseRanges = @{[long]0 = [PSCustomObject]@{ # TODO: Is this definitely the right way to set this up..?
-        baseRangeEnd = $null;
-        shiftAmount  = [long]0;
-        shiftedStart = [long]0;
-        shiftedEnd   = $null}
+        baseRangeStart = [long]0;
+        baseRangeEnd   = $null;
+        shiftAmount    = [long]0;
+        shiftedStart   = [long]0;
+        shiftedEnd     = $null}
     }
 
     # Process the mapping details/file
-    for ($i = 0; $i -lt $SeedMapData.Length; $i++) {
-        $line = $SeedMapData[$i]
+    for ($dataLineArrayNumber = 0; $dataLineArrayNumber -lt $SeedMapData.Length; $dataLineArrayNumber++) {
+        $line = $SeedMapData[$dataLineArrayNumber]
         if ($line -match "([a-z\-]) map:") {  # seed-to-soil map:
-            $dataRow = $SeedMapData[$i + 1]
-            while ($dataRow -match '(\d+)\s(\d+)\s(\d+)' -and $i -lt $SeedMapData.Length) { # 50 98 2 (Destination Source Length)
+            $dataRow = $SeedMapData[$dataLineArrayNumber + 1]
+            $baseRangesTemp = @{}
+            while ($dataRow -match '(\d+)\s(\d+)\s(\d+)' -and $dataLineArrayNumber -lt $SeedMapData.Length) { # 50 98 2 (Destination Source Length)
+                $dataRow = $SeedMapData[++$dataLineArrayNumber]
                 # $newDestinationStart = $Matches[0] # Destination
                 # $newSourceStart      = $Matches[1] # Source
                 # $newRangeLength      = $Matches[2] # Length
@@ -137,35 +140,46 @@ function Get-SeedMapsAttempt3 {
                 $sortedKeys = $baseRanges.Keys | Sort-Object
                 # $originalMappingSplits = $MappingSplits.Clone()
                 for ($keyCount = 0; $keyCount -lt $sortedKeys.Count; $keyCount++) { # Loop over the keys in the baseRanges
-                # foreach ($baseRange in $baseRanges) { # 0-inf. initially; Then 0-49 shifted 0, 50-97 shifted +2, 98-99 shifted -48
                     $baseRange = $baseRanges[$sortedKeys[$keyCount]] # Base range is initially 0-inf.; Then 0-49 shifted 0, 50-97 shifted +2, 98-99 shifted -48
+                    # If the newSourceStart matches the base range, then update current entry
                     if ($newSourceStart -eq $baseRange.shiftedStart) {
                         $baseRange.shiftedStart += $newRangeShift
                         $findNewSourceEnd    = $true
                         $startAlreadyShifted = $true
                     }
+                    # Else if the newSourceStart is within the current baseRange, then we need to set a new baseRange for the start of the range, and update the end of the current baseRange
                     elseif ($newSourceStart -gt $baseRange.shiftedStart -and ($newSourceStart -le $baseRange.shiftedEnd -or $null -eq $baseRange.shiftedEnd)) {
-                        $key = $newSourceStart - $baseRange.shiftedAmount
                         $newBaseRangeForStart = @{
-                            # key           = $key  # TODO: ACtually need the key, in order to add it to the baseRanges hashtable - Maybe include this value (and any others) in the object.
-                            baseRangeEnd = [long]999; # TODO TBD
-                            shiftAmount  = $baseRange.shiftAmount + $newRangeShift # TODO: These should proably all be type long
-                            shiftedStart = $newDestinationStart
-                            shiftedEnd   = $newDestinationEnd
+                            baseRangeStart = $newSourceStart - $baseRange.shiftAmount
+                            baseRangeEnd   = $newSourceEnd - $baseRange.shiftAmount;  # TODO: This okay?
+                            shiftAmount    = $baseRange.shiftAmount + $newRangeShift  # TODO: These should proably all be type long
+                            shiftedStart   = $newDestinationStart
+                            shiftedEnd     = $newDestinationEnd
                         }
+                        # Update the end of the current baseRange so the new one can start
+                        $replacementBaseRange = @{
+                            baseRangeStart = $baseRange.baseRangeStart
+                            baseRangeEnd   = $newBaseRangeForStart.baseRangeStart - 1
+                            shiftAmount    = $baseRange.shiftAmount
+                            shiftedStart   = $baseRange.shiftedStart
+                            shiftedEnd     = $newBaseRangeForStart.shiftedStart - 1
+                        }
+                        # $baseRange.baseRangeEnd = $newBaseRangeForStart.baseRangeStart - 1
+                        # $baseRange.shiftedEnd = $newBaseRangeForStart.shiftedStart - 1
                         $findNewSourceEnd = $true
                     }
                     if ($findNewSourceEnd) {
+                        # If the newSourceEnd is within the current baseRange, then we need to set a new baseRange for the end of the range
                         if ($newSourceEnd -ge $baseRange.shiftedStart -and ($newSourceEnd -lt $baseRange.shiftedEnd -or $null -eq $baseRange.shiftedEnd)) {
-                            $key = $newSourceEnd - $baseRange.shiftedAmount
-                            $newBaseRangeForEnd = @{[long]$key = [PSCustomObject]@{ # TODO: THis is different to the above.
-                                # key           = $key
-                                baseRangeEnd = $baseRange.baseRangeEnd
-                                shiftAmount  = $baseRange.shiftAmount
-                                shiftedStart = $newDestinationEnd + 1
-                                shiftedEnd   = $baseRange.shiftedEnd
-                            }}
+                            $newBaseRangeForEnd = @{
+                                baseRangeStart = $newSourceEnd - $baseRange.shiftAmount + 1
+                                baseRangeEnd   = $baseRange.baseRangeEnd
+                                shiftAmount    = $baseRange.shiftAmount
+                                shiftedStart   = $newDestinationEnd + 1
+                                shiftedEnd     = $baseRange.shiftedEnd
+                            }
                             $findNewSourceEnd = $false
+                            # TODO: Break out of the loop, as we've got the end now
                         }
                         else {
                             if (-not ($startAlreadyShifted)) {
@@ -174,17 +188,30 @@ function Get-SeedMapsAttempt3 {
                         }
                     }
                 }
+
+                # TODO: Maybe each of these need to make a new set of ranges which are only added (to the baseRanges) at the end of the loop, so that the baseRanges aren't being updated while we're looping over them.
+                # Add replacementBaseRange to baseRanges
+                if ($replacementBaseRange) {
+                    $baseRanges[$replacementBaseRange.baseRangeStart] = $replacementBaseRange
+                    # $baseRangesTemp[$replacementBaseRange.baseRangeStart] = $replacementBaseRange
+                }
+
                 # Add newBaseRangeForStart to baseRanges
                 if ($newBaseRangeForStart) {
-                    # $baseRanges.Add($newBaseRangeForStart)
-                    $baseRanges[$newBaseRangeForStart.shiftedStart] = $newBaseRangeForStart
+                    $baseRanges[$newBaseRangeForStart.baseRangeStart] = $newBaseRangeForStart
+                    # $baseRangesTemp[$newBaseRangeForStart.baseRangeStart] = $newBaseRangeForStart
                 }
 
                 # Add newBaseRangeForEnd to baseRanges
                 if ($newBaseRangeForEnd) {
-                    $baseRanges.Add($newBaseRangeForEnd)
+                    $baseRanges[$newBaseRangeForEnd.baseRangeStart] = $newBaseRangeForEnd
+                    # $baseRangesTemp[$newBaseRangeForEnd.baseRangeStart] = $newBaseRangeForEnd
                 }
             }
+            # # TODO: Do the update to baseRanges here, so that we're not updating it while we're looping over it.
+            # foreach ($baseRangeTemp in $baseRangesTemp.Values) {
+            #     $baseRanges[$baseRangeTemp.baseRangeStart] = $baseRangeTemp
+            # }
         }
     }
 }
