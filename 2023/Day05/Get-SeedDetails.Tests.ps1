@@ -93,6 +93,103 @@ Describe "Day 05" {
     }
 
     Context "Part 2 - Better" {
+        It "Get-SeedMapsAttempt3 Seed-Soil Line 1" {
+            # Arrange
+            $SeedMap = @(
+                "seeds: 79 14 55 13",
+                "seed-to-soil map:",
+                "50 98 2"
+            )
+
+            # Act
+            $Map = Get-SeedMapsAttempt3 -SeedMap $SeedMap
+
+            # Assert
+            $Map.Keys | Sort-Object | Should -Be 0,98,100
+
+            $Map[[long]0].baseRangeStart | Should -Be 0
+            $Map[[long]0].baseRangeEnd   | Should -Be 97
+            $Map[[long]0].shiftAmount    | Should -Be 0
+
+            $Map[[long]98].baseRangeStart | Should -Be 98
+            $Map[[long]98].baseRangeEnd   | Should -Be 99
+            $Map[[long]98].shiftAmount    | Should -Be -48
+            
+            $Map[[long]100].baseRangeStart | Should -Be 100
+            $Map[[long]100].baseRangeEnd   | Should -Be $null
+            $Map[[long]100].shiftAmount    | Should -Be 0
+        }
+        
+        It "Get-SeedMapsAttempt3 Seed-Soil Line 2" {
+            # Arrange
+            $SeedMap = @(
+                "seeds: 79 14 55 13",
+                "seed-to-soil map:",
+                "50 98 2",
+                "52 50 48"
+            )
+
+            # Act
+            $Map = Get-SeedMapsAttempt3 -SeedMap $SeedMap
+
+            # Assert
+            $Map.Keys | Sort-Object | Should -Be 0,50,98,100
+
+            $Map[[long]0].baseRangeStart | Should -Be 0
+            $Map[[long]0].baseRangeEnd   | Should -Be 49
+            $Map[[long]0].shiftAmount    | Should -Be 0
+
+            $Map[[long]50].baseRangeStart | Should -Be 50
+            $Map[[long]50].baseRangeEnd   | Should -Be 97
+            $Map[[long]50].shiftAmount    | Should -Be 2
+
+            $Map[[long]98].baseRangeStart | Should -Be 98
+            $Map[[long]98].baseRangeEnd   | Should -Be 99
+            $Map[[long]98].shiftAmount    | Should -Be -48
+            
+            $Map[[long]100].baseRangeStart | Should -Be 100
+            $Map[[long]100].baseRangeEnd   | Should -Be $null
+            $Map[[long]100].shiftAmount    | Should -Be 0
+        }
+        
+        It "Get-SeedMapsAttempt3 Soil-Fertiliser Line 1" {
+            # Arrange
+            $SeedMap = @(
+                "seeds: 79 14 55 13",
+                "seed-to-soil map:",
+                "50 98 2",
+                "52 50 48",
+                "soil-to-fertilizer map:",
+                "0 15 37"
+            )
+
+            # Act
+            $Map = Get-SeedMapsAttempt3 -SeedMap $SeedMap
+
+            # Assert
+            $Map.Keys | Sort-Object | Should -Be 0,15,50,98,100
+
+            $Map[[long]0].baseRangeStart | Should -Be 0
+            $Map[[long]0].baseRangeEnd   | Should -Be 14
+            $Map[[long]0].shiftAmount    | Should -Be 0
+
+            $Map[[long]15].baseRangeStart | Should -Be 15
+            $Map[[long]15].baseRangeEnd   | Should -Be 49
+            $Map[[long]15].shiftAmount    | Should -Be 39
+
+            $Map[[long]50].baseRangeStart | Should -Be 50
+            $Map[[long]50].baseRangeEnd   | Should -Be 97
+            $Map[[long]50].shiftAmount    | Should -Be 2
+
+            $Map[[long]98].baseRangeStart | Should -Be 98
+            $Map[[long]98].baseRangeEnd   | Should -Be 99
+            $Map[[long]98].shiftAmount    | Should -Be -48
+            
+            $Map[[long]100].baseRangeStart | Should -Be 100
+            $Map[[long]100].baseRangeEnd   | Should -Be $null
+            $Map[[long]100].shiftAmount    | Should -Be 0
+        }
+
         It "Should return 46 (from seed 82)" {
             # Arrange
             $SeedMap = $SeedMapData | Where-Object { [string]::IsNullOrEmpty($_) -eq $false }

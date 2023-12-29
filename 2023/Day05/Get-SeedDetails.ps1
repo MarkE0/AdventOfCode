@@ -125,14 +125,15 @@ function Get-SeedMapsAttempt3 {
         if ($line -match "([a-z\-]) map:") {  # seed-to-soil map:
             # TODO-MaybeNot: Create a semi-clone here? E.g. set the baseRangeStart/End to value of ShiftedStart/End. Then use these new values in the if/else statements below.
             $dataRow = $SeedMapData[$dataLineArrayNumber + 1]
-            $baseRangesTemp = @{}
+            # $baseRangesTemp = @{}
             while ($dataRow -match '(\d+)\s(\d+)\s(\d+)' -and $dataLineArrayNumber -lt $SeedMapData.Length) { # 50 98 2 (Destination Source Length)
+                $dataRow = $SeedMapData[++$dataLineArrayNumber]
                 $newDestinationStart, $newSourceStart, $newRangeLength = $dataRow -split '\s' -as [long[]] # Destination Source Length
                 $newSourceEnd        = $newSourceStart + $newRangeLength - 1
                 # $newDestinationEnd   = $newDestinationStart + $newRangeLength - 1 # Used..?
                 $newRangeShift       = $newDestinationStart - $newSourceStart
                 $findNewSourceEnd    = $false
-                $startAlreadyShifted = $false
+                # $startAlreadyShifted = $false
                 
                 $sortedKeys = $baseRanges.Keys | Sort-Object
                 # $originalMappingSplits = $MappingSplits.Clone()
@@ -144,7 +145,7 @@ function Get-SeedMapsAttempt3 {
                             # $baseRange.shiftedStart += $newRangeShift
                         $baseRange.shiftAmount += $newRangeShift
                         $findNewSourceEnd    = $true
-                        $startAlreadyShifted = $true
+                        # $startAlreadyShifted = $true
                     }
                     # Else if the newSourceStart is within the current baseRange, then we need to set a new baseRange for the start of the range, and update the end of the current baseRange
                     # elseif ($newSourceStart -gt $baseRange.shiftedStart -and ($newSourceStart -le $baseRange.shiftedEnd -or $null -eq $baseRange.shiftedEnd)) {
@@ -209,7 +210,7 @@ function Get-SeedMapsAttempt3 {
                     # $baseRangesTemp[$newBaseRangeForEnd.baseRangeStart] = $newBaseRangeForEnd
                 }
 
-                $dataRow = $SeedMapData[++$dataLineArrayNumber]
+                $dataRow = $SeedMapData[$dataLineArrayNumber + 1]
             }
             # # TODO: Do the update to baseRanges here, so that we're not updating it while we're looping over it.
             # foreach ($baseRangeTemp in $baseRangesTemp.Values) {
@@ -218,11 +219,20 @@ function Get-SeedMapsAttempt3 {
 
             # TODO: End of the current map set, so apply changes to real baseRanges
             foreach ($baseRangeKey in $baseRanges.Keys) {
+                if ($null -eq $baseRanges[$baseRangeKey].shiftedStart) {
+                    $baseRanges[$baseRangeKey].shiftedStart = $baseRanges[$baseRangeKey].baseRangeStart
+                }
+                if ($null -eq $baseRanges[$baseRangeKey].shiftedEnd) {
+                    $baseRanges[$baseRangeKey].shiftedEnd = $baseRanges[$baseRangeKey].baseRangeEnd
+                }
                 $baseRanges[$baseRangeKey].shiftedStart += $baseRanges[$baseRangeKey].shiftAmount
                 $baseRanges[$baseRangeKey].shiftedEnd   += $baseRanges[$baseRangeKey].shiftAmount
+                # $baseRanges[$baseRangeKey].shiftedStart = $baseRanges[$baseRangeKey].baseRangeStart + $baseRanges[$baseRangeKey].shiftAmount
+                # $baseRanges[$baseRangeKey].shiftedEnd   = $baseRanges[$baseRangeKey].baseRangeEnd   + $baseRanges[$baseRangeKey].shiftAmount
             }
         }
     }
+    return $baseRanges
 }
 
 function Get-SeedNumbers {
