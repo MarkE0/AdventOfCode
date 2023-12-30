@@ -150,15 +150,21 @@ function Get-SeedMapsAttempt3 {
                     # Else if the newSourceStart is within the current baseRange, then we need to set a new baseRange for the start of the range, and update the end of the current baseRange
                     # elseif ($newSourceStart -gt $baseRange.shiftedStart -and ($newSourceStart -le $baseRange.shiftedEnd -or $null -eq $baseRange.shiftedEnd)) {
                     elseif ($newSourceStart -gt $baseRange.baseRangeStart -and ($newSourceStart -le $baseRange.baseRangeEnd -or $null -eq $baseRange.baseRangeEnd)) {
+                        $tmpBaseRangeEnd = $newSourceEnd - $baseRange.shiftAmount
                         $newBaseRangeForStart = @{
                             baseRangeStart = $newSourceStart - $baseRange.shiftAmount
-                            baseRangeEnd   = $newSourceEnd - $baseRange.shiftAmount;  # TODO: This okay?
-                            shiftAmount    = $baseRange.shiftAmount + $newRangeShift  # TODO: These should proably all be type long
+                            # baseRangeEnd   = $tmpBaseRangeEnd  # TODO: Probably remove this, as we can't guarantee that the end of the range will be in the current baseRange
+                            baseRangeEnd   = [long]-1
+                            shiftAmount    = $baseRange.shiftAmount + $newRangeShift
                             # shiftedStart   = $newDestinationStart
                             # shiftedEnd     = $newDestinationEnd
                         }
-                        # TODO: Now checkf the end of this game also responded in the current range, and say here instead of in about assignment 
-                        # If not, then set ends of me take to be that of old game, and look for end in other teams
+                        # Now check if the end of this new base range also occrred in the current baseRange, and set here instead of in above assignment
+                        # If not, then set end of new range to be that of baseRange, and set he flag to find new source end to true.
+                        if ($tmpBaseRangeEnd -le $baseRange.baseRangeEnd -or $null -eq $baseRange.baseRangeEnd) {
+                            $newBaseRangeForStart.baseRangeEnd = $tmpBaseRangeEnd # TODO: Check this..
+                            $findNewSourceEnd = $true
+                        }
 
                         # Update the end of the current baseRange so the new one can start
                         $replacementBaseRange = @{
