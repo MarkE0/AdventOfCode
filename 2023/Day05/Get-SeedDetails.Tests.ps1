@@ -93,7 +93,7 @@ Describe "Day 05" {
     }
 
     Context "Part 2 - Better" {
-        It "Get-SeedMapsAttempt3 Seed-Soil Line 1" {
+        It "Get-SMAttempt3 Seed-Soil Line 1" {
             # Arrange
             $SeedMap = @(
                 "seeds: 79 14 55 13",
@@ -120,7 +120,7 @@ Describe "Day 05" {
             $Map[[long]100].shiftAmount    | Should -Be 0
         }
         
-        It "Get-SeedMapsAttempt3 Seed-Soil Line 2" {
+        It "Get-SMAttempt3 Seed-Soil Line 2" {
             # Arrange
             $SeedMap = @(
                 "seeds: 79 14 55 13",
@@ -152,7 +152,7 @@ Describe "Day 05" {
             $Map[[long]100].shiftAmount    | Should -Be 0
         }
         
-        It "Get-SeedMapsAttempt3 Soil-Fertiliser Line 1" {
+        It "Get-SMAttempt3 Soil-Fertiliser Line 1" {
             # Arrange
             $SeedMap = @(
                 "seeds: 79 14 55 13",

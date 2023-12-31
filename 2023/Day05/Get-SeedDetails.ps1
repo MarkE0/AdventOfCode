@@ -129,94 +129,134 @@ function Get-SeedMapsAttempt3 {
             while ($dataRow -match '(\d+)\s(\d+)\s(\d+)' -and $dataLineArrayNumber -lt $SeedMapData.Length) { # 50 98 2 (Destination Source Length)
                 $dataRow = $SeedMapData[++$dataLineArrayNumber]
                 $newDestinationStart, $newSourceStart, $newRangeLength = $dataRow -split '\s' -as [long[]] # Destination Source Length
-                $newSourceEnd        = $newSourceStart + $newRangeLength - 1
-                # $newDestinationEnd   = $newDestinationStart + $newRangeLength - 1 # Used..?
-                $newRangeShift       = $newDestinationStart - $newSourceStart
-                $findNewSourceEnd    = $false
-                # $startAlreadyShifted = $false
+                $newSourceEnd       = $newSourceStart + $newRangeLength - 1
+                # $newDestinationEnd  = $newDestinationStart + $newRangeLength - 1 # Used..?
+                $newRangeShift      = $newDestinationStart - $newSourceStart
+                $findNewSourceEnd   = $false
+                $replacementBaseRangeAtStart = $null
+                $replacementBaseRangeAtEnd   = $null
+                $newBaseRangeForStart        = $null
+                $newBaseRangeForEnd          = $null
                 
                 $sortedKeys = $baseRanges.Keys | Sort-Object
                 # $originalMappingSplits = $MappingSplits.Clone()
                 for ($keyCount = 0; $keyCount -lt $sortedKeys.Count; $keyCount++) { # Loop over the keys in the baseRanges
                     $baseRange = $baseRanges[$sortedKeys[$keyCount]] # Base range is initially 0-inf.; Then 0-49 shifted 0, 50-97 shifted +2, 98-99 shifted -48
+                    $foundInSameRangeAsStart = $false
                     # If the newSourceStart matches the base range, then update current entry
-                    # if ($newSourceStart -eq $baseRange.shiftedStart) {
                     if ($newSourceStart -eq $baseRange.baseRangeStart) {
-                            # $baseRange.shiftedStart += $newRangeShift
                         $baseRange.shiftAmount += $newRangeShift
-                        $findNewSourceEnd    = $true
-                        # $startAlreadyShifted = $true
+                        $findNewSourceEnd = $true
+                        $foundInSameRangeAsStart = $true
                     }
-                    # Else if the newSourceStart is within the current baseRange, then we need to set a new baseRange for the start of the range, and update the end of the current baseRange
-                    # elseif ($newSourceStart -gt $baseRange.shiftedStart -and ($newSourceStart -le $baseRange.shiftedEnd -or $null -eq $baseRange.shiftedEnd)) {
+                    # Else if the newSourceStart is within the current baseRange, then set a new baseRange for the start of range, and update end of current baseRange
                     elseif ($newSourceStart -gt $baseRange.baseRangeStart -and ($newSourceStart -le $baseRange.baseRangeEnd -or $null -eq $baseRange.baseRangeEnd)) {
+                        $tmpBaseRangeStart = $newSourceStart - $baseRange.shiftAmount
+                        # Update the end of the current baseRange so the new one can start
+                        $replacementBaseRangeAtStart = @{
+                            baseRangeStart = $baseRange.baseRangeStart
+                            # baseRangeEnd   = $newBaseRangeForStart.baseRangeStart - 1
+                            baseRangeEnd   = $tmpBaseRangeStart - 1
+                            shiftAmount    = $baseRange.shiftAmount
+                        }
+
                         $tmpBaseRangeEnd = $newSourceEnd - $baseRange.shiftAmount
+                        # Set a new baseRange for the start of the new range
                         $newBaseRangeForStart = @{
-                            baseRangeStart = $newSourceStart - $baseRange.shiftAmount
+                            # baseRangeStart = $newSourceStart - $baseRange.shiftAmount
+                            baseRangeStart = $tmpBaseRangeStart
                             # baseRangeEnd   = $tmpBaseRangeEnd  # TODO: Probably remove this, as we can't guarantee that the end of the range will be in the current baseRange
                             baseRangeEnd   = [long]-1
                             shiftAmount    = $baseRange.shiftAmount + $newRangeShift
-                            # shiftedStart   = $newDestinationStart
-                            # shiftedEnd     = $newDestinationEnd
-                        }
-                        # Now check if the end of this new base range also occrred in the current baseRange, and set here instead of in above assignment
-                        # If not, then set end of new range to be that of baseRange, and set he flag to find new source end to true.
-                        if ($tmpBaseRangeEnd -le $baseRange.baseRangeEnd -or $null -eq $baseRange.baseRangeEnd) {
-                            $newBaseRangeForStart.baseRangeEnd = $tmpBaseRangeEnd # TODO: Check this..
-                            $findNewSourceEnd = $true
                         }
 
-                        # Update the end of the current baseRange so the new one can start
-                        $replacementBaseRange = @{
-                            baseRangeStart = $baseRange.baseRangeStart
-                            baseRangeEnd   = $newBaseRangeForStart.baseRangeStart - 1
-                            shiftAmount    = $baseRange.shiftAmount
-                            # shiftedStart   = $baseRange.shiftedStart
-                            # shiftedEnd     = $newBaseRangeForStart.shiftedStart - 1
-                        }
-                        # $baseRange.baseRangeEnd = $newBaseRangeForStart.baseRangeStart - 1
-                        # $baseRange.shiftedEnd = $newBaseRangeForStart.shiftedStart - 1
-                        $findNewSourceEnd = $true
+                        # # Now check if the end of this new base range also occurred in the current baseRange, and set here instead of in above assignment
+                        # # If not, then set end of new range to be that of baseRange, and set he flag to find new source end to true.
+                        # if ($tmpBaseRangeEnd -le $baseRange.baseRangeEnd -or $null -eq $baseRange.baseRangeEnd) {
+                        #     $newBaseRangeForStart.baseRangeEnd = $tmpBaseRangeEnd # TODO: Check this..
+                        #     $findNewSourceEnd = $true
+                        # }
+
+                        # # If the end of the new range also occurs in the current baseRange, then set a new baseRange too
+                        # if ($newSourceEnd -lt $baseRange.baseRangeEnd -or $null -eq $baseRange.baseRangeEnd) {
+                        #     $newBaseRangeForEnd = @{
+                        #         baseRangeStart = $newSourceEnd - $baseRange.shiftAmount + 1
+                        #         baseRangeEnd   = $baseRange.baseRangeEnd # TODO: Check this line for when the new range end extends into now baseRange
+                        #         shiftAmount    = $baseRange.shiftAmount
+                        #     }
+                            
+                        #     # Update the end of the current baseRange so the new one can start
+                        #     $replacementBaseRangeAtEnd = @{
+                        #         baseRangeStart = $baseRange.baseRangeStart
+                        #         baseRangeEnd   = $newSourceEnd - $baseRange.shiftAmount
+                        #         shiftAmount    = $baseRange.shiftAmount + $newRangeShift
+                        #     }
+                        #     $findNewSourceEnd = $false
+                        # }
+                        # else {
+                            $findNewSourceEnd = $true # The end wasn't part of the current baseRange, so we need to find it elsewhere
+                            $foundInSameRangeAsStart = $true
+                        # }
                     }
+
                     if ($findNewSourceEnd) {
-                        # If the newSourceEnd is within the current baseRange, then we need to set a new baseRange for the end of the range
-                        # if ($newSourceEnd -ge $baseRange.shiftedStart -and ($newSourceEnd -lt $baseRange.shiftedEnd -or $null -eq $baseRange.shiftedEnd)) {
-                        if ($newSourceEnd -ge $baseRange.baseRangeStart -and ($newSourceEnd -lt $baseRange.baseRangeEnd -or $null -eq $baseRange.baseRangeEnd)) {
-                            $newBaseRangeForEnd = @{
-                                baseRangeStart = $newSourceEnd - $baseRange.shiftAmount + 1
-                                baseRangeEnd   = $baseRange.baseRangeEnd
-                                shiftAmount    = $baseRange.shiftAmount
-                                # shiftedStart   = $newDestinationEnd + 1
-                                # shiftedEnd     = $baseRange.shiftedEnd
+                        if ($newSourceEnd -eq $baseRange.baseRangeEnd) {
+                            $newBaseRangeForStart.baseRangeEnd = $newSourceEnd
+                            $findNewSourceEnd = $false
+                        }
+                        # If newSourceEnd within the current baseRange, then set a new baseRange for the end of the range
+                        elseif ($newSourceEnd -ge $baseRange.baseRangeStart -and ($newSourceEnd -lt $baseRange.baseRangeEnd -or $null -eq $baseRange.baseRangeEnd)) {
+                            if (-not($foundInSameRangeAsStart)) {
+                                # Update the end of the current baseRange so the new one can start
+                                $replacementBaseRangeAtEnd = @{
+                                    baseRangeStart = $baseRange.baseRangeStart
+                                    # baseRangeEnd   = $newSourceEnd - $baseRange.shiftAmount
+                                    baseRangeEnd   = $tmpBaseRangeEnd
+                                    shiftAmount    = $baseRange.shiftAmount + $newRangeShift
+                                }
                             }
+
+                            # Set the end of the new baseRange now that we know which baseRange it's in
+                            $newBaseRangeForStart.baseRangeEnd = $tmpBaseRangeEnd
+                            if ($replacementBaseRangeAtStart) {
+                                $replacementBaseRangeAtStart.baseRangeEnd = $newBaseRangeForStart.baseRangeStart - 1
+                            }
+
+                            # Set a new baseRange for immediately after the end of the new range (e.g. returning the remainder of the baseRange)
+                            $newBaseRangeForEnd = @{
+                                # baseRangeStart = $newSourceEnd - $baseRange.shiftAmount + 1
+                                baseRangeStart = $tmpBaseRangeEnd + 1
+                                baseRangeEnd   = $baseRange.baseRangeEnd # TODO: Check this line for when the new range end extends into now baseRange
+                                shiftAmount    = $baseRange.shiftAmount
+                            }
+
+                            # TODO: Also need to adjust each baseRange where we still haven't found the end of the new range
+
                             $findNewSourceEnd = $false
                             # TODO: Break out of the loop, as we've got the end now
                         }
-                        # else {
-                        #     if (-not ($startAlreadyShifted)) {
-                        #         $baseRange.shiftedStart += $newRangeShift # TODO: All the above "shiftedStart" commented - should be same here..??
-                        #     }
-                        # }
                     }
                 }
 
                 # TODO: Maybe each of these need to make a new set of ranges which are only added (to the baseRanges) at the end of the loop, so that the baseRanges aren't being updated while we're looping over them.
-                # Add replacementBaseRange to baseRanges
-                if ($replacementBaseRange) {
-                    $baseRanges[$replacementBaseRange.baseRangeStart] = $replacementBaseRange
-                    # $baseRangesTemp[$replacementBaseRange.baseRangeStart] = $replacementBaseRange
+                # Add replacementBaseRangeAtStart to baseRanges
+                if ($replacementBaseRangeAtStart) {
+                    $baseRanges[$replacementBaseRangeAtStart.baseRangeStart] = $replacementBaseRangeAtStart
+                }
+
+                # Add replacementBaseRangeAtEnd to baseRanges
+                if ($replacementBaseRangeAtEnd) {
+                    $baseRanges[$replacementBaseRangeAtEnd.baseRangeStart] = $replacementBaseRangeAtEnd
                 }
 
                 # Add newBaseRangeForStart to baseRanges
                 if ($newBaseRangeForStart) {
                     $baseRanges[$newBaseRangeForStart.baseRangeStart] = $newBaseRangeForStart
-                    # $baseRangesTemp[$newBaseRangeForStart.baseRangeStart] = $newBaseRangeForStart
                 }
 
                 # Add newBaseRangeForEnd to baseRanges
                 if ($newBaseRangeForEnd) {
                     $baseRanges[$newBaseRangeForEnd.baseRangeStart] = $newBaseRangeForEnd
-                    # $baseRangesTemp[$newBaseRangeForEnd.baseRangeStart] = $newBaseRangeForEnd
                 }
 
                 $dataRow = $SeedMapData[$dataLineArrayNumber + 1]
@@ -228,14 +268,20 @@ function Get-SeedMapsAttempt3 {
 
             # TODO: End of the current map set, so apply changes to real baseRanges
             foreach ($baseRangeKey in $baseRanges.Keys) {
+                # Initialise shiftedStart/End if they don't exist
                 if ($null -eq $baseRanges[$baseRangeKey].shiftedStart) {
                     $baseRanges[$baseRangeKey].shiftedStart = $baseRanges[$baseRangeKey].baseRangeStart
                 }
                 if ($null -eq $baseRanges[$baseRangeKey].shiftedEnd) {
                     $baseRanges[$baseRangeKey].shiftedEnd = $baseRanges[$baseRangeKey].baseRangeEnd
                 }
+
+                # Update shiftedStart/End
                 $baseRanges[$baseRangeKey].shiftedStart += $baseRanges[$baseRangeKey].shiftAmount
-                $baseRanges[$baseRangeKey].shiftedEnd   += $baseRanges[$baseRangeKey].shiftAmount
+                # Only attempt to update shiftedEnd if it's not null (e.g. not the last baseRange running to infinity)
+                if ($null -ne $baseRanges[$baseRangeKey].shiftedEnd) {
+                    $baseRanges[$baseRangeKey].shiftedEnd += $baseRanges[$baseRangeKey].shiftAmount
+                }
                 # $baseRanges[$baseRangeKey].shiftedStart = $baseRanges[$baseRangeKey].baseRangeStart + $baseRanges[$baseRangeKey].shiftAmount
                 # $baseRanges[$baseRangeKey].shiftedEnd   = $baseRanges[$baseRangeKey].baseRangeEnd   + $baseRanges[$baseRangeKey].shiftAmount
             }
